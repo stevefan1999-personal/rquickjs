@@ -97,6 +97,16 @@ impl Runtime {
         self.get_spawner().idle()
     }
 
+    #[cfg_attr(feature = "doc-cfg", doc(cfg(feature = "futures")))]
+    pub fn tasks_empty(&self) -> bool {
+        self.get_spawner().tasks.is_empty()
+    }
+
+    #[cfg_attr(feature = "doc-cfg", doc(cfg(feature = "futures")))]
+    pub fn tasks_len(&self) -> usize {
+        self.get_spawner().tasks.len()
+    }
+
     /// Run pending jobs and futures executor
     #[cfg_attr(feature = "doc-cfg", doc(cfg(feature = "futures")))]
     #[inline(always)]

@@ -82,7 +82,7 @@ impl Future for Executor {
 }
 
 pub struct Spawner {
-    tasks: Sender<Runnable>,
+    pub(crate) tasks: Sender<Runnable>,
     idles: Sender<Waker>,
     idle: Ref<AtomicBool>,
 }
