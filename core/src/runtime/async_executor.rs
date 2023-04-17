@@ -66,8 +66,7 @@ impl Future for Executor {
                 }
             } else {
                 // spawner is alive and queue is empty
-                cx.waker().wake_by_ref();
-                println!("pending");
+                cx.waker().wake();
                 Poll::Pending
             }
         };
