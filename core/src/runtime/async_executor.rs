@@ -27,7 +27,6 @@ pin_project! {
         tasks: RecvStream<'static, Runnable>,
         idles: Receiver<Waker>,
         idle: Ref<AtomicBool>,
-        executing: AtomicBool,
     }
 }
 
@@ -40,8 +39,7 @@ impl Executor {
             Self {
                 tasks: tasks_rx.into_stream(),
                 idles: idles_rx,
-                idle: idle.clone(),
-                executing: AtomicBool::new(true),
+                idle: idle.clone()
             },
             Spawner {
                 tasks: tasks_tx,
@@ -59,9 +57,8 @@ impl Future for Executor {
         let result = {
             if let Poll::Ready(task) = self.as_mut().project().tasks.poll_next(cx) {
                 if let Some(task) = task {
-                    self.executing.store(true, Ordering::SeqCst);
+                    self.idle.store(false, Ordering::SeqCst);
                     task.run();
-                    self.executing.store(false, Ordering::SeqCst);
                     cx.waker().wake_by_ref();
                     return Poll::Pending;
                 } else {
@@ -75,13 +72,11 @@ impl Future for Executor {
             }
         };
 
-        if !self.executing.load(Ordering::SeqCst) {
-            self.idle.store(true, Ordering::SeqCst);
+        self.idle.store(true, Ordering::SeqCst);
 
-            // wake idle futures
-            while let Ok(waker) = self.idles.try_recv() {
-                waker.wake();
-            }
+        // wake idle futures
+        while let Ok(waker) = self.idles.try_recv() {
+            waker.wake();
         }
 
         result
