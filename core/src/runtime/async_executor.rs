@@ -59,9 +59,9 @@ impl Future for Executor {
         let result = {
             if let Poll::Ready(task) = self.as_mut().project().tasks.poll_next(cx) {
                 if let Some(task) = task {
+                    self.bootstrapped.store(true, Ordering::SeqCst);
                     task.run();
                     cx.waker().wake_by_ref();
-                    self.bootstrapped.store(true, Ordering::SeqCst);
                     return Poll::Pending;
                 } else {
                     // spawner is closed and queue is empty
@@ -69,7 +69,7 @@ impl Future for Executor {
                 }
             } else {
                 // spawner is alive and queue is empty
-                // cx.waker().wake_by_ref();
+                cx.waker().wake_by_ref();
                 Poll::Pending
             }
         };
