@@ -59,7 +59,7 @@ impl Future for Executor {
                 if let Some(task) = task {
                     self.idle.store(false, Ordering::SeqCst);
                     task.run();
-                    cx.waker().wake_by_ref();
+                    // cx.waker().wake_by_ref();
                     return Poll::Pending;
                 } else {
                     // spawner is closed and queue is empty
@@ -67,7 +67,7 @@ impl Future for Executor {
                 }
             } else {
                 // spawner is alive and queue is empty
-                // cx.waker().wake_by_ref();
+                cx.waker().wake_by_ref();
                 Poll::Pending
             }
         };
