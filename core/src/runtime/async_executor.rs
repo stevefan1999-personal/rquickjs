@@ -27,7 +27,7 @@ pin_project! {
         tasks: RecvStream<'static, Runnable>,
         idles: Receiver<Waker>,
         idle: Ref<AtomicBool>,
-        bootstrapped: AtomicBool,
+        executing: AtomicBool,
     }
 }
 
@@ -41,7 +41,7 @@ impl Executor {
                 tasks: tasks_rx.into_stream(),
                 idles: idles_rx,
                 idle: idle.clone(),
-                bootstrapped: AtomicBool::new(false),
+                executing: AtomicBool::new(true),
             },
             Spawner {
                 tasks: tasks_tx,
@@ -59,8 +59,9 @@ impl Future for Executor {
         let result = {
             if let Poll::Ready(task) = self.as_mut().project().tasks.poll_next(cx) {
                 if let Some(task) = task {
-                    self.bootstrapped.store(true, Ordering::SeqCst);
+                    self.executing.store(true, Ordering::SeqCst);
                     task.run();
+                    self.executing.store(false, Ordering::SeqCst);
                     cx.waker().wake_by_ref();
                     return Poll::Pending;
                 } else {
@@ -69,12 +70,12 @@ impl Future for Executor {
                 }
             } else {
                 // spawner is alive and queue is empty
-                cx.waker().wake_by_ref();
+                // cx.waker().wake_by_ref();
                 Poll::Pending
             }
         };
 
-        if self.bootstrapped.load(Ordering::SeqCst) {
+        if !self.executing.load(Ordering::SeqCst) {
             self.idle.store(true, Ordering::SeqCst);
 
             // wake idle futures
